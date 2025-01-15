@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../domain/usecases/usecases.dart';
 import '../widgets/widgets.dart';
@@ -91,7 +92,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Emparejar un dispositivo y actualizar la lista de emparejados y confirmar comunicacion 
-  Future<void> bondDeviceAndRefresh(BluetoothDevice device) async {
+ Future<void> bondDeviceAndRefresh(BluetoothDevice device) async {
   await bondDevice(device);
 
   setState(() {
@@ -112,7 +113,10 @@ class _HomePageState extends State<HomePage> {
         TextButton(
           onPressed: () {
             Navigator.of(context).pop(); // Cerrar el diálogo
-            Navigator.pushNamed(context, '/communication', arguments: device);
+            GoRouter.of(context).go(
+              '/communication',
+              extra: device, // Pasar el dispositivo como extra
+            );
           },
           child: Text("Sí"),
         ),

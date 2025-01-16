@@ -18,4 +18,8 @@ void setupDependencies() {
   getIt.registerFactory(() => BondDevice(getIt<BluetoothService>()));
   getIt.registerFactory(() => ConnectDevice(getIt<BluetoothService>()));
   getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>())); // Nuevo
+
+  // Otros registros...
+  getIt.registerFactory(() => ConnectToDevice(getIt<FlutterBluetoothSerial>()));
+  getIt.registerFactory(() => CheckDeviceStatus(getIt<FlutterBluetoothSerial>()));
 }

@@ -1,8 +1,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-import 'package:bluetooth2_0/presentation/state/communication_controller.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import '../../domain/usecases/check_device_status.dart';
+import '../../domain/usecases/connect_to_device.dart';
 
 class CommunicationPage extends StatefulWidget {
   final BluetoothDevice device;
@@ -14,85 +16,87 @@ class CommunicationPage extends StatefulWidget {
 }
 
 class _CommunicationPageState extends State<CommunicationPage> {
-  late CommunicationController _controller;
-  late TextEditingController _messageController;
-  bool isConnected = false;
+  final CheckDeviceStatus checkDeviceStatus = GetIt.I<CheckDeviceStatus>();
+  final ConnectToDevice connectToDevice = GetIt.I<ConnectToDevice>();
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = CommunicationController(widget.device);
-    _messageController = TextEditingController();
-    _connectToDevice();
-  }
+  BluetoothConnection? _connection;
+  bool isConnected = false;
+  bool isChecking = false;
+  bool isConnecting = false;
+  String statusMessage = "";
 
   @override
   void dispose() {
-    _controller.disconnect();
-    _messageController.dispose();
+    _disconnect();
     super.dispose();
   }
 
-  Future<void> _connectToDevice() async {
-    bool success = await _controller.connect();
+  Future<void> _checkDevice() async {
     setState(() {
-      isConnected = success;
+      isChecking = true;
+      statusMessage = "Verificando dispositivo...";
     });
 
-    if (success) {
-      _controller.listenForDisconnection(() {
+    try {
+      final status = await checkDeviceStatus.call(widget.device);
+
+      if (!status["isBonded"]) {
+        setState(() {
+          statusMessage = "El dispositivo no está emparejado. Dirección: ${widget.device.address}";
+        });
+        return;
+      }
+
+      setState(() {
+        statusMessage = "El dispositivo está listo para conectar.";
+      });
+    } catch (e) {
+      setState(() {
+        statusMessage = "Error durante la verificación: $e";
+      });
+    } finally {
+      setState(() {
+        isChecking = false;
+      });
+    }
+  }
+
+  Future<void> _connectToDevice() async {
+    setState(() {
+      isConnecting = true;
+      statusMessage = "Intentando conectar...";
+    });
+
+    try {
+      _connection = await connectToDevice.call(widget.device);
+      setState(() {
+        isConnected = true;
+        statusMessage = "Conectado a ${widget.device.name}.";
+      });
+
+      // Escuchar eventos de desconexión
+      _connection?.input?.listen(null)?.onDone(() {
         setState(() {
           isConnected = false;
+          statusMessage = "Conexión cerrada por el dispositivo.";
         });
-        _showDisconnectedAlert();
       });
-    } else {
-      _showConnectionErrorAlert();
+    } catch (e) {
+      setState(() {
+        statusMessage = "Error al conectar: ${e.toString()}";
+      });
+    } finally {
+      setState(() {
+        isConnecting = false;
+      });
     }
   }
 
-  void _showDisconnectedAlert() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Desconexión"),
-        content: Text("El dispositivo ${widget.device.name} se ha desconectado."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              context.go('/home');
-            },
-            child: Text("Aceptar"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showConnectionErrorAlert() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Error de conexión"),
-        content: Text("No se pudo conectar al dispositivo ${widget.device.name}."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              context.go('/home');
-            },
-            child: Text("Aceptar"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendMessage() {
-    String message = _messageController.text;
-    if (message.isNotEmpty && isConnected) {
-      _controller.sendMessage(message);
-      _messageController.clear();
-    }
+  void _disconnect() async {
+    await _connection?.close();
+    setState(() {
+      isConnected = false;
+    });
   }
 
   @override
@@ -100,12 +104,11 @@ class _CommunicationPageState extends State<CommunicationPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Comunicación con ${widget.device.name}"),
-        centerTitle: true,
         actions: [
           IconButton(
             onPressed: () {
-              _controller.disconnect();
-              context.go('/home');
+              _disconnect();
+              GoRouter.of(context).go('/home');
             },
             icon: Icon(Icons.logout),
           ),
@@ -115,57 +118,21 @@ class _CommunicationPageState extends State<CommunicationPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-                      size: 80,
-                      color: isConnected ? Colors.blue : Colors.red,
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      isConnected
-                          ? "Conectado a ${widget.device.name}"
-                          : "Desconectado de ${widget.device.name}",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                labelText: "Escribe un mensaje",
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.send),
-              ),
+            Text(
+              statusMessage,
+              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
             ),
             SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: isConnected ? _sendMessage : null,
-              icon: Icon(Icons.send),
-              label: Text("Enviar Mensaje"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50),
-              ),
+            ElevatedButton(
+              onPressed: isChecking ? null : _checkDevice,
+              child: Text(isChecking ? "Verificando..." : "Verificar Dispositivo"),
             ),
             SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                _controller.disconnect();
-                context.go('/home');
-              },
-              icon: Icon(Icons.logout),
-              label: Text("Desconectar y Volver a Home"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: Size(double.infinity, 50),
-              ),
+            ElevatedButton(
+              onPressed: isConnected || isConnecting
+                  ? null
+                  : _connectToDevice, // Intentar conectar
+              child: Text(isConnecting ? "Conectando..." : "Conectar"),
             ),
           ],
         ),
@@ -173,3 +140,4 @@ class _CommunicationPageState extends State<CommunicationPage> {
     );
   }
 }
+

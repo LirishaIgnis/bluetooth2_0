@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/usecases/usecases.dart';
 import '../../domain/usecases/bond_device_with_control.dart';
 import '../widgets/widgets.dart';
@@ -103,7 +104,11 @@ class _HomePageState extends State<HomePage> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.pushNamed(context, '/communication', arguments: device);
+                  // Navegar a la pantalla de comunicación con GoRouter
+                  GoRouter.of(context).go(
+                    '/communication',
+                    extra: device, // Pasar el dispositivo como argumento
+                  );
                 },
                 child: Text("Sí"),
               ),

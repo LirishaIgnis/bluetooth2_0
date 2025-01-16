@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
@@ -23,11 +24,14 @@ class _CommunicationPageState extends State<CommunicationPage> {
   bool isConnected = false;
   bool isChecking = false;
   bool isConnecting = false;
+  bool isCancelling = false;
   String statusMessage = "";
+  TextEditingController _messageController = TextEditingController();
 
   @override
   void dispose() {
     _disconnect();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -75,7 +79,9 @@ class _CommunicationPageState extends State<CommunicationPage> {
       });
 
       // Escuchar eventos de desconexión
-      _connection?.input?.listen(null)?.onDone(() {
+      _connection?.input?.listen((data) {
+        print("Datos recibidos: $data");
+      })?.onDone(() {
         setState(() {
           isConnected = false;
           statusMessage = "Conexión cerrada por el dispositivo.";
@@ -92,11 +98,35 @@ class _CommunicationPageState extends State<CommunicationPage> {
     }
   }
 
-  void _disconnect() async {
+  void _cancelConnectionAttempt() {
+    if (isConnecting) {
+      setState(() {
+        isConnecting = false;
+        isCancelling = true;
+        statusMessage = "Conexión cancelada.";
+      });
+    }
+  }
+
+  Future<void> _disconnect() async {
     await _connection?.close();
     setState(() {
       isConnected = false;
     });
+    GoRouter.of(context).go('/home');
+  }
+
+  void _sendMessage() {
+    String message = _messageController.text.trim();
+    if (message.isNotEmpty && isConnected) {
+      _connection?.output.add(Uint8List.fromList(message.codeUnits));
+      _messageController.clear();
+      print("Mensaje enviado: $message");
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("No se puede enviar el mensaje: conexión no establecida o mensaje vacío.")),
+      );
+    }
   }
 
   @override
@@ -106,10 +136,7 @@ class _CommunicationPageState extends State<CommunicationPage> {
         title: Text("Comunicación con ${widget.device.name}"),
         actions: [
           IconButton(
-            onPressed: () {
-              _disconnect();
-              GoRouter.of(context).go('/home');
-            },
+            onPressed: _disconnect,
             icon: Icon(Icons.logout),
           ),
         ],
@@ -123,17 +150,53 @@ class _CommunicationPageState extends State<CommunicationPage> {
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isChecking ? null : _checkDevice,
-              child: Text(isChecking ? "Verificando..." : "Verificar Dispositivo"),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isConnected || isConnecting
-                  ? null
-                  : _connectToDevice, // Intentar conectar
-              child: Text(isConnecting ? "Conectando..." : "Conectar"),
-            ),
+            if (!isConnected)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: isChecking ? null : _checkDevice,
+                    icon: Icon(Icons.search),
+                    label: Text(isChecking ? "Verificando..." : "Verificar Dispositivo"),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: isConnected || isConnecting ? null : _connectToDevice,
+                    icon: isConnecting
+                        ? CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                        : Icon(Icons.bluetooth),
+                    label: Text(isConnecting ? "Conectando..." : "Conectar"),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: isConnecting ? _cancelConnectionAttempt : null,
+                    icon: Icon(Icons.cancel),
+                    label: Text("Cancelar"),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  ),
+                ],
+              ),
+            if (isConnected) ...[
+              SizedBox(height: 20),
+              TextField(
+                controller: _messageController,
+                decoration: InputDecoration(
+                  labelText: "Escribe un mensaje",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _sendMessage,
+                icon: Icon(Icons.send),
+                label: Text("Enviar mensaje"),
+              ),
+              Spacer(),
+              ElevatedButton.icon(
+                onPressed: _disconnect,
+                icon: Icon(Icons.logout),
+                label: Text("Desconectar"),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              ),
+            ],
           ],
         ),
       ),

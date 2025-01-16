@@ -3,6 +3,10 @@ import 'package:get_it/get_it.dart';
 import '../data/services/bluetooth_service.dart';
 import '../domain/usecases/bond_device_with_control.dart';
 import '../domain/usecases/usecases.dart';
+import '../presentation/providers/providers.dart';
+
+
+
 
 final GetIt getIt = GetIt.instance;
 
@@ -22,4 +26,10 @@ void setupDependencies() {
   // Otros registros...
   getIt.registerFactory(() => ConnectToDevice(getIt<FlutterBluetoothSerial>()));
   getIt.registerFactory(() => CheckDeviceStatus(getIt<FlutterBluetoothSerial>()));
+
+   // Proveedores
+  getIt.registerLazySingleton(() => MessageHistoryProvider());
+  getIt.registerLazySingleton(() => DeviceConnectionProvider());
+
 }
+

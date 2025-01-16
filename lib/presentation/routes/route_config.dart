@@ -16,7 +16,7 @@ final GoRouter goRouter = GoRouter(
       builder: (context, state) {
         final device = state.extra;
         if (device is BluetoothDevice) {
-          return CommunicationPage(device: device);
+          return CommunicationPage(device: device); // Ahora funciona correctamente
         } else {
           return Scaffold(
             appBar: AppBar(title: Text("Error")),

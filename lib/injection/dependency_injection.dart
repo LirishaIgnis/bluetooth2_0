@@ -1,3 +1,4 @@
+import '../data/repositories/repositories.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
 import '../data/services/bluetooth_service.dart';
@@ -15,13 +16,17 @@ void setupDependencies() {
   getIt.registerSingleton<FlutterBluetoothSerial>(FlutterBluetoothSerial.instance);
   getIt.registerSingleton<BluetoothService>(BluetoothService(getIt<FlutterBluetoothSerial>()));
 
+   // Registro del repositorio
+  getIt.registerLazySingleton(() => ButtonActionRepository());
+
   // Casos de uso
   getIt.registerFactory(() => CheckPermissions(getIt<BluetoothService>()));
   getIt.registerFactory(() => EnableBluetooth(getIt<BluetoothService>()));
   getIt.registerFactory(() => DiscoverDevices(getIt<BluetoothService>()));
   getIt.registerFactory(() => BondDevice(getIt<BluetoothService>()));
   getIt.registerFactory(() => ConnectDevice(getIt<BluetoothService>()));
-  getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>())); // Nuevo
+  getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>())); 
+   getIt.registerLazySingleton(() => GetButtonActions(getIt<ButtonActionRepository>()));
 
   // Otros registros...
   getIt.registerFactory(() => ConnectToDevice(getIt<FlutterBluetoothSerial>()));
@@ -30,6 +35,8 @@ void setupDependencies() {
    // Proveedores
   getIt.registerLazySingleton(() => MessageHistoryProvider());
   getIt.registerLazySingleton(() => DeviceConnectionProvider());
+  getIt.registerLazySingleton(() => ButtonActionProvider(getIt<GetButtonActions>()));
+
 
 }
 

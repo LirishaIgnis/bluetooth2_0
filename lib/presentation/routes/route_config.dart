@@ -1,8 +1,9 @@
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import '../pages/home_page.dart';
 import '../pages/communication_page.dart';
+import '../pages/tablero_page.dart';
 
 final GoRouter goRouter = GoRouter(
   initialLocation: '/home',
@@ -16,7 +17,23 @@ final GoRouter goRouter = GoRouter(
       builder: (context, state) {
         final device = state.extra;
         if (device is BluetoothDevice) {
-          return CommunicationPage(device: device); // Ahora funciona correctamente
+          return CommunicationPage(device: device);
+        } else {
+          return Scaffold(
+            appBar: AppBar(title: Text("Error")),
+            body: Center(
+              child: Text("No se pudo encontrar el dispositivo."),
+            ),
+          );
+        }
+      },
+    ),
+    GoRoute(
+      path: '/tablero',
+      builder: (context, state) {
+        final device = state.extra;
+        if (device is BluetoothDevice) {
+          return TableroPage(device: device); // Pasar el dispositivo como argumento
         } else {
           return Scaffold(
             appBar: AppBar(title: Text("Error")),

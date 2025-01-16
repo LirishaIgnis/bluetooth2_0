@@ -172,6 +172,13 @@ class _CommunicationPageState extends State<CommunicationPage> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          GoRouter.of(context).go('/tablero', extra: widget.device);
+        },
+        child: Icon(Icons.dashboard),
+        tooltip: "Ir al Tablero",
+      ),
     );
   }
 }

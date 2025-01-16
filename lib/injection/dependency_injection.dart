@@ -1,23 +1,21 @@
-import 'package:get_it/get_it.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:get_it/get_it.dart';
 import '../data/services/bluetooth_service.dart';
-import '../domain/usecases/check_permissions.dart';
-import '../domain/usecases/enable_bluetooth.dart';
-import '../domain/usecases/discover_devices.dart';
-import '../domain/usecases/bond_device.dart';
-import '../domain/usecases/connect_device.dart';
+import '../domain/usecases/bond_device_with_control.dart';
+import '../domain/usecases/usecases.dart';
 
-final locator = GetIt.instance;
+final GetIt getIt = GetIt.instance;
 
 void setupDependencies() {
   // Servicio Bluetooth
-  locator.registerLazySingleton(() => BluetoothService(FlutterBluetoothSerial.instance));
+  getIt.registerSingleton<FlutterBluetoothSerial>(FlutterBluetoothSerial.instance);
+  getIt.registerSingleton<BluetoothService>(BluetoothService(getIt<FlutterBluetoothSerial>()));
 
   // Casos de uso
-  locator.registerLazySingleton(() => CheckPermissions(locator()));
-  locator.registerLazySingleton(() => EnableBluetooth(locator()));
-  locator.registerLazySingleton(() => DiscoverDevices(locator()));
-  locator.registerLazySingleton(() => BondDevice(locator()));
-  locator.registerLazySingleton(() => ConnectDevice(locator()));
+  getIt.registerFactory(() => CheckPermissions(getIt<BluetoothService>()));
+  getIt.registerFactory(() => EnableBluetooth(getIt<BluetoothService>()));
+  getIt.registerFactory(() => DiscoverDevices(getIt<BluetoothService>()));
+  getIt.registerFactory(() => BondDevice(getIt<BluetoothService>()));
+  getIt.registerFactory(() => ConnectDevice(getIt<BluetoothService>()));
+  getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>())); // Nuevo
 }
-

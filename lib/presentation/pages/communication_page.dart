@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
@@ -24,12 +23,12 @@ class _CommunicationPageState extends State<CommunicationPage> {
   bool isConnected = false;
   bool isChecking = false;
   bool isConnecting = false;
-  bool isCancelling = false;
   String statusMessage = "";
   TextEditingController _messageController = TextEditingController();
 
   @override
   void dispose() {
+    // Cerrar conexión Bluetooth y limpiar listeners
     _disconnect();
     _messageController.dispose();
     super.dispose();
@@ -44,6 +43,8 @@ class _CommunicationPageState extends State<CommunicationPage> {
     try {
       final status = await checkDeviceStatus.call(widget.device);
 
+      if (!mounted) return;
+
       if (!status["isBonded"]) {
         setState(() {
           statusMessage = "El dispositivo no está emparejado. Dirección: ${widget.device.address}";
@@ -55,13 +56,17 @@ class _CommunicationPageState extends State<CommunicationPage> {
         statusMessage = "El dispositivo está listo para conectar.";
       });
     } catch (e) {
-      setState(() {
-        statusMessage = "Error durante la verificación: $e";
-      });
+      if (mounted) {
+        setState(() {
+          statusMessage = "Error durante la verificación: $e";
+        });
+      }
     } finally {
-      setState(() {
-        isChecking = false;
-      });
+      if (mounted) {
+        setState(() {
+          isChecking = false;
+        });
+      }
     }
   }
 
@@ -73,6 +78,9 @@ class _CommunicationPageState extends State<CommunicationPage> {
 
     try {
       _connection = await connectToDevice.call(widget.device);
+
+      if (!mounted) return;
+
       setState(() {
         isConnected = true;
         statusMessage = "Conectado a ${widget.device.name}.";
@@ -82,37 +90,41 @@ class _CommunicationPageState extends State<CommunicationPage> {
       _connection?.input?.listen((data) {
         print("Datos recibidos: $data");
       })?.onDone(() {
-        setState(() {
-          isConnected = false;
-          statusMessage = "Conexión cerrada por el dispositivo.";
-        });
+        if (mounted) {
+          setState(() {
+            isConnected = false;
+            statusMessage = "Conexión cerrada por el dispositivo.";
+          });
+        }
       });
     } catch (e) {
-      setState(() {
-        statusMessage = "Error al conectar: ${e.toString()}";
-      });
+      if (mounted) {
+        setState(() {
+          statusMessage = "Error al conectar: ${e.toString()}";
+        });
+      }
     } finally {
-      setState(() {
-        isConnecting = false;
-      });
-    }
-  }
-
-  void _cancelConnectionAttempt() {
-    if (isConnecting) {
-      setState(() {
-        isConnecting = false;
-        isCancelling = true;
-        statusMessage = "Conexión cancelada.";
-      });
+      if (mounted) {
+        setState(() {
+          isConnecting = false;
+        });
+      }
     }
   }
 
   Future<void> _disconnect() async {
     await _connection?.close();
-    setState(() {
-      isConnected = false;
-    });
+    _connection = null;
+    if (mounted) {
+      setState(() {
+        isConnected = false;
+        statusMessage = "Desconectado.";
+      });
+    }
+  }
+
+  void _goBackHome() {
+    _disconnect();
     GoRouter.of(context).go('/home');
   }
 
@@ -136,8 +148,8 @@ class _CommunicationPageState extends State<CommunicationPage> {
         title: Text("Comunicación con ${widget.device.name}"),
         actions: [
           IconButton(
-            onPressed: _disconnect,
-            icon: Icon(Icons.logout),
+            onPressed: _goBackHome,
+            icon: Icon(Icons.home),
           ),
         ],
       ),
@@ -166,12 +178,6 @@ class _CommunicationPageState extends State<CommunicationPage> {
                         : Icon(Icons.bluetooth),
                     label: Text(isConnecting ? "Conectando..." : "Conectar"),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: isConnecting ? _cancelConnectionAttempt : null,
-                    icon: Icon(Icons.cancel),
-                    label: Text("Cancelar"),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  ),
                 ],
               ),
             if (isConnected) ...[
@@ -191,9 +197,9 @@ class _CommunicationPageState extends State<CommunicationPage> {
               ),
               Spacer(),
               ElevatedButton.icon(
-                onPressed: _disconnect,
-                icon: Icon(Icons.logout),
-                label: Text("Desconectar"),
+                onPressed: _goBackHome,
+                icon: Icon(Icons.home),
+                label: Text("Volver al Home"),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               ),
             ],
@@ -203,4 +209,3 @@ class _CommunicationPageState extends State<CommunicationPage> {
     );
   }
 }
-

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
@@ -16,6 +17,8 @@ class TableroPage extends StatefulWidget {
 
 class _TableroPageState extends State<TableroPage> {
   final DeviceConnectionProvider _connectionProvider = GetIt.I<DeviceConnectionProvider>();
+  final ButtonActionProvider _buttonActionProvider = GetIt.I<ButtonActionProvider>();
+
   String _statusMessage = "Verificando dispositivo...";
   bool _isChecking = true;
 
@@ -120,6 +123,19 @@ class _TableroPageState extends State<TableroPage> {
     return '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
   }
 
+  void _sendTrama(String trama) {
+    if (_connectionProvider.isConnected) {
+      _connectionProvider.connection?.output.add(Uint8List.fromList(trama.codeUnits));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Trama enviada: $trama")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("No hay conexión activa")),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _connectionProvider.disconnect();
@@ -129,6 +145,8 @@ class _TableroPageState extends State<TableroPage> {
 
   @override
   Widget build(BuildContext context) {
+    final buttonActions = _buttonActionProvider.actions;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
@@ -244,7 +262,7 @@ class _TableroPageState extends State<TableroPage> {
               ),
               const SizedBox(height: 20),
 
-              // Controles de puntos y faltas
+              // Controles de puntos y faltas con envío de tramas
               Container(
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
@@ -256,22 +274,16 @@ class _TableroPageState extends State<TableroPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        controlBotones('Puntos Local', () => setState(() => puntosLocal++), () {
-                          if (puntosLocal > 0) setState(() => puntosLocal--);
-                        }),
-                        controlBotones('Puntos Visitante', () => setState(() => puntosVisitante++), () {
-                          if (puntosVisitante > 0) setState(() => puntosVisitante--);
-                        }),
+                        controlBotones('Puntos Local', 'PL+', () => setState(() => puntosLocal++)),
+                        controlBotones('Puntos Visitante', 'PV+', () => setState(() => puntosVisitante++)),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        controlBotones('Faltas Local', () => setState(() => faltasLocal++),
-                            () => setState(() => faltasLocal--)),
-                        controlBotones('Faltas Visitante', () => setState(() => faltasVisitante++),
-                            () => setState(() => faltasVisitante--)),
+                        controlBotones('Faltas Local', 'FL+', () => setState(() => faltasLocal++)),
+                        controlBotones('Faltas Visitante', 'FV+', () => setState(() => faltasVisitante++)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -311,7 +323,7 @@ class _TableroPageState extends State<TableroPage> {
     );
   }
 
-  Widget controlBotones(String titulo, VoidCallback onSumar, VoidCallback onRestar) {
+  Widget controlBotones(String titulo, String trama, VoidCallback onSumar) {
     return Column(
       children: [
         Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 16)),
@@ -319,13 +331,18 @@ class _TableroPageState extends State<TableroPage> {
           children: [
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade200),
-              onPressed: onSumar,
+              onPressed: () {
+                onSumar();
+                _sendTrama(trama);
+              },
               child: const Text('+'),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade200),
-              onPressed: onRestar,
+              onPressed: () {
+                _sendTrama("-$trama");
+              },
               child: const Text('-'),
             ),
           ],
@@ -334,5 +351,4 @@ class _TableroPageState extends State<TableroPage> {
     );
   }
 }
-
 

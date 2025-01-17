@@ -1,12 +1,22 @@
-import '../entities/button_action_entity.dart';
-import '../../data/repositories/button_action_repository.dart';
+
+import 'package:bluetooth2_0/data/repositories/repositories.dart';
+import 'package:bluetooth2_0/domain/entities/button_action.dart';
 
 class GetButtonActions {
   final ButtonActionRepository repository;
 
   GetButtonActions(this.repository);
 
-  Future<List<ButtonActionEntity>> call() {
-    return repository.getButtonActions();
+  List<ButtonAction> call() => repository.getAllButtonActions();
+}
+
+class UpdateButtonAction {
+  final ButtonActionRepository repository;
+
+  UpdateButtonAction(this.repository);
+
+  void call(String id, String newTrama) {
+    repository.updateTrama(id, newTrama);
   }
 }
+

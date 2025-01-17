@@ -4,10 +4,8 @@ import 'package:get_it/get_it.dart';
 import '../data/services/bluetooth_service.dart';
 import '../domain/usecases/bond_device_with_control.dart';
 import '../domain/usecases/usecases.dart';
+
 import '../presentation/providers/providers.dart';
-
-
-
 
 final GetIt getIt = GetIt.instance;
 
@@ -16,7 +14,7 @@ void setupDependencies() {
   getIt.registerSingleton<FlutterBluetoothSerial>(FlutterBluetoothSerial.instance);
   getIt.registerSingleton<BluetoothService>(BluetoothService(getIt<FlutterBluetoothSerial>()));
 
-   // Registro del repositorio
+  // Repositorios
   getIt.registerLazySingleton(() => ButtonActionRepository());
 
   // Casos de uso
@@ -25,18 +23,16 @@ void setupDependencies() {
   getIt.registerFactory(() => DiscoverDevices(getIt<BluetoothService>()));
   getIt.registerFactory(() => BondDevice(getIt<BluetoothService>()));
   getIt.registerFactory(() => ConnectDevice(getIt<BluetoothService>()));
-  getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>())); 
-   getIt.registerLazySingleton(() => GetButtonActions(getIt<ButtonActionRepository>()));
+  getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>()));
+  getIt.registerLazySingleton(() => GetButtonActions(getIt<ButtonActionRepository>()));
+  getIt.registerLazySingleton(() => UpdateButtonAction(getIt<ButtonActionRepository>())); // Nuevo caso de uso
 
-  // Otros registros...
-  getIt.registerFactory(() => ConnectToDevice(getIt<FlutterBluetoothSerial>()));
-  getIt.registerFactory(() => CheckDeviceStatus(getIt<FlutterBluetoothSerial>()));
-
-   // Proveedores
+  // Proveedores
   getIt.registerLazySingleton(() => MessageHistoryProvider());
   getIt.registerLazySingleton(() => DeviceConnectionProvider());
-  getIt.registerLazySingleton(() => ButtonActionProvider(getIt<GetButtonActions>()));
-
-
+  getIt.registerLazySingleton(() => ButtonActionProvider(
+        getIt<GetButtonActions>(),
+        getIt<UpdateButtonAction>(),
+      )); // Actualizado para incluir el nuevo caso de uso
 }
 

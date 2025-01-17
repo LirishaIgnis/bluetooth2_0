@@ -18,6 +18,7 @@ class TableroPage extends StatefulWidget {
 class _TableroPageState extends State<TableroPage> {
   final DeviceConnectionProvider _connectionProvider = GetIt.I<DeviceConnectionProvider>();
   final ButtonActionProvider _buttonActionProvider = GetIt.I<ButtonActionProvider>();
+  final MessageHistoryProvider _messageHistoryProvider = GetIt.I<MessageHistoryProvider>();
 
   String _statusMessage = "Verificando dispositivo...";
   bool _isChecking = true;
@@ -126,6 +127,7 @@ class _TableroPageState extends State<TableroPage> {
   void _sendTrama(String trama) {
     if (_connectionProvider.isConnected) {
       _connectionProvider.connection?.output.add(Uint8List.fromList(trama.codeUnits));
+      _messageHistoryProvider.addMessage(trama);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Trama enviada: $trama")),
       );
@@ -134,6 +136,37 @@ class _TableroPageState extends State<TableroPage> {
         SnackBar(content: Text("No hay conexión activa")),
       );
     }
+  }
+
+  void _showMessageHistory() {
+    final messages = _messageHistoryProvider.messages.reversed.take(5).toList();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Historial de mensajes'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(messages[index], style: const TextStyle(fontSize: 14)),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -145,8 +178,6 @@ class _TableroPageState extends State<TableroPage> {
 
   @override
   Widget build(BuildContext context) {
-    final buttonActions = _buttonActionProvider.actions;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
@@ -157,7 +188,14 @@ class _TableroPageState extends State<TableroPage> {
               _connectionProvider.disconnect();
               GoRouter.of(context).go('/home');
             },
-            icon: Icon(Icons.home),
+            icon: const Icon(Icons.home),
+          ),
+          IconButton(
+            onPressed: () {
+              GoRouter.of(context).push('/communication', extra: widget.device);
+            },
+            icon: const Icon(Icons.arrow_back),
+            tooltip: "Volver a comunicación",
           ),
         ],
       ),
@@ -251,7 +289,7 @@ class _TableroPageState extends State<TableroPage> {
               ),
               const SizedBox(height: 20),
 
-              // Marcador de puntos
+              // Marcador de puntos y faltas
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -274,16 +312,20 @@ class _TableroPageState extends State<TableroPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        controlBotones('Puntos Local', 'PL+', () => setState(() => puntosLocal++)),
-                        controlBotones('Puntos Visitante', 'PV+', () => setState(() => puntosVisitante++)),
+                        controlBotones('Puntos Local', 'PL+', () => setState(() => puntosLocal++),
+                            () => setState(() => puntosLocal > 0 ? puntosLocal-- : 0)),
+                        controlBotones('Puntos Visitante', 'PV+', () => setState(() => puntosVisitante++),
+                            () => setState(() => puntosVisitante > 0 ? puntosVisitante-- : 0)),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        controlBotones('Faltas Local', 'FL+', () => setState(() => faltasLocal++)),
-                        controlBotones('Faltas Visitante', 'FV+', () => setState(() => faltasVisitante++)),
+                        controlBotones('Faltas Local', 'FL+', () => setState(() => faltasLocal++),
+                            () => setState(() => faltasLocal > 0 ? faltasLocal-- : 0)),
+                        controlBotones('Faltas Visitante', 'FV+', () => setState(() => faltasVisitante++),
+                            () => setState(() => faltasVisitante > 0 ? faltasVisitante-- : 0)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -298,6 +340,28 @@ class _TableroPageState extends State<TableroPage> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'history',
+            backgroundColor: Colors.blue,
+            onPressed: _showMessageHistory,
+            child: const Icon(Icons.history),
+            tooltip: "Ver historial de mensajes",
+          ),
+          const SizedBox(width: 10),
+          FloatingActionButton(
+            heroTag: 'toCommunication',
+            backgroundColor: Colors.orange,
+            onPressed: () {
+              GoRouter.of(context).push('/communication', extra: widget.device);
+            },
+            child: const Icon(Icons.arrow_back),
+            tooltip: "Volver a comunicación",
+          ),
+        ],
       ),
     );
   }
@@ -323,7 +387,7 @@ class _TableroPageState extends State<TableroPage> {
     );
   }
 
-  Widget controlBotones(String titulo, String trama, VoidCallback onSumar) {
+  Widget controlBotones(String titulo, String trama, VoidCallback onSumar, VoidCallback onRestar) {
     return Column(
       children: [
         Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 16)),
@@ -341,6 +405,7 @@ class _TableroPageState extends State<TableroPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade200),
               onPressed: () {
+                onRestar();
                 _sendTrama("-$trama");
               },
               child: const Text('-'),

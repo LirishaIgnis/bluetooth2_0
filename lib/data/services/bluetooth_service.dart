@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -39,7 +40,7 @@ class BluetoothService {
 
   Future<void> bondDevice(BluetoothDevice device) async {
     bool? bonded = await bluetooth.bondDeviceAtAddress(device.address);
-    if (bonded == true) { // Verificación explícita de true
+    if (bonded == true) {
       print("Dispositivo ${device.name} emparejado");
     } else {
       print("No se pudo emparejar el dispositivo ${device.name}");
@@ -53,4 +54,14 @@ class BluetoothService {
       print('Error al conectar: $error');
     });
   }
+
+  // Nueva función para recibir mensajes desde un dispositivo conectado
+ Stream<String> receiveMessages(BluetoothConnection connection) async* {
+  await for (final data in connection.input!) {
+    final message = String.fromCharCodes(data);
+    print("Mensaje recibido: $message");
+    yield message;
+  }
+}
+
 }

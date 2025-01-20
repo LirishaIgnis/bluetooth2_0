@@ -4,7 +4,6 @@ import 'package:get_it/get_it.dart';
 import '../data/services/bluetooth_service.dart';
 import '../domain/usecases/bond_device_with_control.dart';
 import '../domain/usecases/usecases.dart';
-
 import '../presentation/providers/providers.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -25,14 +24,18 @@ void setupDependencies() {
   getIt.registerFactory(() => ConnectDevice(getIt<BluetoothService>()));
   getIt.registerFactory(() => BondDeviceWithControl(getIt<FlutterBluetoothSerial>()));
   getIt.registerLazySingleton(() => GetButtonActions(getIt<ButtonActionRepository>()));
-  getIt.registerLazySingleton(() => UpdateButtonAction(getIt<ButtonActionRepository>())); // Nuevo caso de uso
+  getIt.registerLazySingleton(() => UpdateButtonAction(getIt<ButtonActionRepository>()));
 
   // Proveedores
+  getIt.registerLazySingleton(() => TimerProvider(
+        getIt<DeviceConnectionProvider>(), // Agregado el parámetro requerido
+      ));
+  getIt.registerLazySingleton(() => ReceivedMessagesProvider());
   getIt.registerLazySingleton(() => MessageHistoryProvider());
   getIt.registerLazySingleton(() => DeviceConnectionProvider());
   getIt.registerLazySingleton(() => ButtonActionProvider(
         getIt<GetButtonActions>(),
         getIt<UpdateButtonAction>(),
-      )); // Actualizado para incluir el nuevo caso de uso
+      ));
 }
 

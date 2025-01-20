@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
@@ -16,16 +17,19 @@ class CommunicationPage extends StatefulWidget {
 
 class _CommunicationPageState extends State<CommunicationPage> {
   final MessageHistoryProvider _messageHistoryProvider = GetIt.I<MessageHistoryProvider>();
+  final ReceivedMessagesProvider _receivedMessagesProvider = GetIt.I<ReceivedMessagesProvider>();
   final DeviceConnectionProvider _connectionProvider = GetIt.I<DeviceConnectionProvider>();
 
   TextEditingController _messageController = TextEditingController();
   String _statusMessage = "Verificando dispositivo...";
   bool _isChecking = true;
+  StreamSubscription<String>? _messageSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkDeviceStatus();
+    _startReceivingMessages();
   }
 
   Future<void> _checkDeviceStatus() async {
@@ -34,7 +38,6 @@ class _CommunicationPageState extends State<CommunicationPage> {
       _isChecking = true;
     });
 
-    // Simula la verificación de emparejamiento
     await Future.delayed(Duration(seconds: 2));
 
     if (widget.device.isBonded ?? false) {
@@ -67,11 +70,38 @@ class _CommunicationPageState extends State<CommunicationPage> {
     }
   }
 
+  void _disconnectFromDevice() {
+    _connectionProvider.disconnect();
+    _messageSubscription?.cancel();
+    setState(() {
+      _statusMessage = "Desconectado.";
+    });
+  }
+
+  void _startReceivingMessages() {
+    final connection = _connectionProvider.connection;
+
+    if (connection != null && connection.input != null) {
+      _messageSubscription = connection.input!.listen(
+        (data) {
+          final message = String.fromCharCodes(data);
+          print("Datos en crudo recibidos: $data");
+          print("Convertido a texto: $message");
+          _receivedMessagesProvider.addMessage(message);
+          setState(() {});
+        },
+        onError: (error) {
+          print("Error al recibir datos: $error");
+        },
+      ) as StreamSubscription<String>?;
+    }
+  }
+
   void _sendMessage() {
     String message = _messageController.text.trim();
     if (message.isNotEmpty && _connectionProvider.isConnected) {
       _connectionProvider.connection?.output.add(Uint8List.fromList(message.codeUnits));
-      _messageHistoryProvider.addMessage(message); // Guardar mensaje en el historial
+      _messageHistoryProvider.addMessage(message);
       _messageController.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,6 +113,7 @@ class _CommunicationPageState extends State<CommunicationPage> {
   @override
   void dispose() {
     _connectionProvider.disconnect();
+    _messageSubscription?.cancel();
     _messageController.dispose();
     super.dispose();
   }
@@ -90,6 +121,7 @@ class _CommunicationPageState extends State<CommunicationPage> {
   @override
   Widget build(BuildContext context) {
     final messages = _messageHistoryProvider.messages;
+    final receivedMessages = _receivedMessagesProvider.messages;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,12 +160,7 @@ class _CommunicationPageState extends State<CommunicationPage> {
                 ),
                 if (_connectionProvider.isConnected)
                   ElevatedButton(
-                    onPressed: () {
-                      _connectionProvider.disconnect();
-                      setState(() {
-                        _statusMessage = "Desconectado.";
-                      });
-                    },
+                    onPressed: _disconnectFromDevice,
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                     child: Text("Desconectar"),
                   ),
@@ -141,6 +168,25 @@ class _CommunicationPageState extends State<CommunicationPage> {
             ),
             SizedBox(height: 20),
             if (_connectionProvider.isConnected) ...[
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: ListView.builder(
+                    itemCount: receivedMessages.length,
+                    itemBuilder: (context, index) {
+                      return Text(
+                        receivedMessages[index],
+                        style: TextStyle(color: Colors.black, fontSize: 16),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
               TextField(
                 controller: _messageController,
                 decoration: InputDecoration(
@@ -172,14 +218,28 @@ class _CommunicationPageState extends State<CommunicationPage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          GoRouter.of(context).go('/tablero', extra: widget.device);
-        },
-        child: Icon(Icons.dashboard),
-        tooltip: "Ir al Tablero",
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'toTablero',
+            onPressed: () {
+              GoRouter.of(context).go('/tablero', extra: widget.device);
+            },
+            child: Icon(Icons.dashboard),
+            tooltip: "Ir al Tablero",
+          ),
+          SizedBox(height: 10),
+          FloatingActionButton(
+            heroTag: 'toTableroPruebas',
+            onPressed: () {
+              GoRouter.of(context).go('/tableroPruebas', extra: widget.device);
+            },
+            child: Icon(Icons.auto_graph),
+            tooltip: "Ir al Tablero de Pruebas",
+          ),
+        ],
       ),
     );
   }
 }
-

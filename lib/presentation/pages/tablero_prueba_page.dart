@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../providers/providers.dart';
 
 class TableroPruebaPage extends StatefulWidget {
@@ -185,48 +187,53 @@ class _TableroPruebaPageState extends State<TableroPruebaPage> {
               const SizedBox(height: 20),
 
               // Temporizador y botones de control
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      _formatTime(_timerProvider.remainingSeconds),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade300),
-                          onPressed: _timerProvider.startTimer,
-                          child: const Text('Iniciar'),
-                        ),
-                        const SizedBox(width: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300),
-                          onPressed: _timerProvider.pauseTimer,
-                          child: const Text('Pausar'),
-                        ),
-                        const SizedBox(width: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade300),
-                          onPressed: _timerProvider.resetTimer,
-                          child: const Text('Reiniciar'),
-                        ),
-                      ],
-                    )
-                  ],
-                ),
-              ),
+             Container(
+  padding: const EdgeInsets.all(16.0),
+  decoration: BoxDecoration(
+    color: Colors.grey[900],
+    borderRadius: BorderRadius.circular(12.0),
+  ),
+  child: Column(
+    children: [
+      Consumer<TimerProvider>(
+        builder: (context, timerProvider, child) {
+          return Text(
+            _formatTime(timerProvider.remainingSeconds),
+            style: const TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          );
+        },
+      ),
+      const SizedBox(height: 10),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade300),
+            onPressed: Provider.of<TimerProvider>(context, listen: false).startTimer,
+            child: const Text('Iniciar'),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300),
+            onPressed: Provider.of<TimerProvider>(context, listen: false).pauseTimer,
+            child: const Text('Pausar'),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade300),
+            onPressed: Provider.of<TimerProvider>(context, listen: false).resetTimer,
+            child: const Text('Reiniciar'),
+          ),
+        ],
+      )
+    ],
+  ),
+),
+
               const SizedBox(height: 20),
 
               // Marcador de puntos y faltas

@@ -17,21 +17,22 @@ class TimerProvider with ChangeNotifier {
   bool get isRunning => _isRunning;
 
   void startTimer() {
-    if (_isRunning) return;
+  if (_isRunning) return;
 
-    _isRunning = true;
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (_remainingSeconds > 0) {
-        _remainingSeconds--;
-        _sendTramaForTime();
-        notifyListeners();
-      } else {
-        _sendFinalTimeTrama();
-        stopTimer();
-      }
-    });
-    notifyListeners();
-  }
+  _isRunning = true;
+  _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    if (_remainingSeconds > 0) {
+      _remainingSeconds--;
+      _sendTramaForTime(); // Enviar trama
+      notifyListeners(); // Notificar cambios
+    } else {
+      _sendFinalTimeTrama(); // Enviar trama de tiempo final
+      stopTimer(); // Detener temporizador
+    }
+  });
+  notifyListeners();
+}
+
 
   void pauseTimer() {
     _timer?.cancel();

@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get_it/get_it.dart';
@@ -25,7 +24,6 @@ class _TableroPruebaPageState extends State<TableroPruebaPage> {
   String _statusMessage = "Verificando dispositivo...";
   bool _isChecking = true;
 
-  // Estados locales del tablero
   int puntosLocal = 0;
   int puntosVisitante = 0;
   int periodo = 1;
@@ -42,7 +40,6 @@ class _TableroPruebaPageState extends State<TableroPruebaPage> {
       _isChecking = true;
     });
 
-    // Simula la verificación de emparejamiento
     await Future.delayed(const Duration(seconds: 2));
 
     if (widget.device.isBonded ?? false) {
@@ -147,157 +144,178 @@ class _TableroPruebaPageState extends State<TableroPruebaPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // Mensajes de estado
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[850],
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Text(
-                  _statusMessage,
-                  style: const TextStyle(fontSize: 16, color: Colors.white),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              _buildStatusMessage(),
               const SizedBox(height: 20),
-
-              // Controles de conexión Bluetooth
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: _isChecking ? null : _checkDeviceStatus,
-                    child: Text(_isChecking ? "Verificando..." : "Verificar dispositivo"),
-                  ),
-                  ElevatedButton(
-                    onPressed: _connectionProvider.isConnected || _isChecking
-                        ? null
-                        : _connectToDevice,
-                    child: const Text("Conectar"),
-                  ),
-                  if (_connectionProvider.isConnected)
-                    ElevatedButton(
-                      onPressed: _disconnectFromDevice,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text("Desconectar"),
-                    ),
-                ],
-              ),
+              _buildConnectionControls(),
               const SizedBox(height: 20),
-
-              // Temporizador y botones de control
-             Container(
-  padding: const EdgeInsets.all(16.0),
-  decoration: BoxDecoration(
-    color: Colors.grey[900],
-    borderRadius: BorderRadius.circular(12.0),
-  ),
-  child: Column(
-    children: [
-      Consumer<TimerProvider>(
-        builder: (context, timerProvider, child) {
-          return Text(
-            _formatTime(timerProvider.remainingSeconds),
-            style: const TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          );
-        },
-      ),
-      const SizedBox(height: 10),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade300),
-            onPressed: Provider.of<TimerProvider>(context, listen: false).startTimer,
-            child: const Text('Iniciar'),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300),
-            onPressed: Provider.of<TimerProvider>(context, listen: false).pauseTimer,
-            child: const Text('Pausar'),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade300),
-            onPressed: Provider.of<TimerProvider>(context, listen: false).resetTimer,
-            child: const Text('Reiniciar'),
-          ),
-        ],
-      )
-    ],
-  ),
-),
-
+              _buildTimer(),
               const SizedBox(height: 20),
-
-              // Marcador de puntos y faltas
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  marcadorEquipo('LOCAL', puntosLocal, true),
-                  Text('Periodo $periodo', style: const TextStyle(color: Colors.white, fontSize: 24)),
-                  marcadorEquipo('VISITANTE', puntosVisitante, false),
-                ],
-              ),
+              _buildScoreboard(),
               const SizedBox(height: 20),
-
-              // Controles de puntos
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[850],
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        controlBotones('Puntos Local', 'PL+', () => setState(() => puntosLocal++)),
-                        controlBotones('Puntos Visitante', 'PV+', () => setState(() => puntosVisitante++)),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                      onPressed: () => setState(() => periodo++),
-                      child: const Text('Cambiar Periodo'),
-                    ),
-                  ],
-                ),
-              ),
+              _buildScoreControls(),
             ],
           ),
         ),
       ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'history',
-            backgroundColor: Colors.blue,
-            onPressed: _showMessageHistory,
-            child: const Icon(Icons.history),
-            tooltip: "Ver historial de mensajes",
+      floatingActionButton: _buildFloatingButtons(),
+    );
+  }
+
+  Widget _buildStatusMessage() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: Text(
+        _statusMessage,
+        style: const TextStyle(fontSize: 16, color: Colors.white),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildConnectionControls() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        ElevatedButton(
+          onPressed: _isChecking ? null : _checkDeviceStatus,
+          child: Text(_isChecking ? "Verificando..." : "Verificar dispositivo"),
+        ),
+        ElevatedButton(
+          onPressed: _connectionProvider.isConnected || _isChecking
+              ? null
+              : _connectToDevice,
+          child: const Text("Conectar"),
+        ),
+        if (_connectionProvider.isConnected)
+          ElevatedButton(
+            onPressed: _disconnectFromDevice,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Desconectar"),
           ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            heroTag: 'toCommunication',
-            backgroundColor: Colors.orange,
-            onPressed: () {
-              GoRouter.of(context).push('/communication', extra: widget.device);
+      ],
+    );
+  }
+
+  Widget _buildTimer() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: Column(
+        children: [
+          Consumer<TimerProvider>(
+            builder: (context, timerProvider, child) {
+              return Text(
+                _formatTime(timerProvider.remainingSeconds),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              );
             },
-            child: const Icon(Icons.arrow_back),
-            tooltip: "Volver a comunicación",
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade300),
+                onPressed: _timerProvider.startTimer,
+                child: const Text('Iniciar'),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300),
+                onPressed: _timerProvider.pauseTimer,
+                child: const Text('Pausar'),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade300),
+                onPressed: _timerProvider.resetTimer,
+                child: const Text('Reiniciar'),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildScoreboard() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        marcadorEquipo('LOCAL', puntosLocal, true),
+        Text('Periodo $periodo', style: const TextStyle(color: Colors.white, fontSize: 24)),
+        marcadorEquipo('VISITANTE', puntosVisitante, false),
+      ],
+    );
+  }
+
+  Widget _buildScoreControls() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              controlBotones('Puntos Local', '1'),
+              controlBotones('Puntos Visitante', '2'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            onPressed: () => setState(() => periodo++),
+            child: const Text('Cambiar Periodo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        FloatingActionButton(
+          heroTag: 'history',
+          backgroundColor: Colors.blue,
+          onPressed: _showMessageHistory,
+          child: const Icon(Icons.history),
+          tooltip: "Ver historial de mensajes",
+        ),
+        const SizedBox(width: 10),
+        FloatingActionButton(
+          heroTag: 'toCommunication',
+          backgroundColor: Colors.orange,
+          onPressed: () {
+            GoRouter.of(context).push('/communication', extra: widget.device);
+          },
+          child: const Icon(Icons.arrow_back),
+          tooltip: "Volver a comunicación",
+        ),
+        FloatingActionButton(
+          heroTag: 'actualizado',
+          backgroundColor: Colors.blue,
+          onPressed: _showMessageHistory,
+          child: const Icon(Icons.ramen_dining_rounded),
+          tooltip: "Ver historial de mensajes",
+        ),
+      ],
     );
   }
 
@@ -320,23 +338,30 @@ class _TableroPruebaPageState extends State<TableroPruebaPage> {
     );
   }
 
-  Widget controlBotones(String titulo, String trama, VoidCallback onSumar) {
-    return Column(
-      children: [
-        Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 16)),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade200),
-          onPressed: () {
-            onSumar();
-            _timerProvider.sendInterruptTrama(
-              _buttonActionProvider.actions.firstWhere((action) => action.trama == trama),
+Widget controlBotones(String titulo, String id) {
+  return Column(
+    children: [
+      Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 16)),
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade200),
+        onPressed: () {
+          try {
+            final action = _buttonActionProvider.getActionById(id);
+            _timerProvider.sendInterruptTrama(action); // Asegúrate de que action.trama sea List<int>
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Error: $e")),
             );
-          },
-          child: Text(titulo),
-        ),
-      ],
-    );
-  }
+          }
+        },
+        child: Text(titulo),
+      ),
+    ],
+  );
+}
+
+
+
 
   String _formatTime(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
@@ -344,3 +369,4 @@ class _TableroPruebaPageState extends State<TableroPruebaPage> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
+

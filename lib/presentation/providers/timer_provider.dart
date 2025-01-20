@@ -17,22 +17,21 @@ class TimerProvider with ChangeNotifier {
   bool get isRunning => _isRunning;
 
   void startTimer() {
-  if (_isRunning) return;
+    if (_isRunning) return;
 
-  _isRunning = true;
-  _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-    if (_remainingSeconds > 0) {
-      _remainingSeconds--;
-      _sendTramaForTime(); // Enviar trama
-      notifyListeners(); // Notificar cambios
-    } else {
-      _sendFinalTimeTrama(); // Enviar trama de tiempo final
-      stopTimer(); // Detener temporizador
-    }
-  });
-  notifyListeners();
-}
-
+    _isRunning = true;
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (_remainingSeconds > 0) {
+        _remainingSeconds--;
+        _sendTramaForTime(); // Enviar trama de tiempo
+        notifyListeners(); // Notificar cambios
+      } else {
+        _sendFinalTimeTrama(); // Enviar trama de tiempo final
+        stopTimer(); // Detener temporizador
+      }
+    });
+    notifyListeners();
+  }
 
   void pauseTimer() {
     _timer?.cancel();
@@ -70,10 +69,7 @@ class TimerProvider with ChangeNotifier {
       0x98, 0x98, 0x11, 0x32, 0x62, 0xAD
     ];
 
-    // Convierte a Uint8List y envía
-    final Uint8List tramaUint8 = Uint8List.fromList(trama);
-    connectionProvider.connection?.output.add(tramaUint8);
-    _logTrama(tramaUint8);
+    _sendTrama(trama);
   }
 
   void _sendFinalTimeTrama() {
@@ -88,24 +84,36 @@ class TimerProvider with ChangeNotifier {
       0x98, 0x98, 0x11, 0x32, 0x62, 0xAD
     ];
 
-    final Uint8List tramaUint8 = Uint8List.fromList(tramaFinal);
-    connectionProvider.connection?.output.add(tramaUint8);
-    _logTrama(tramaUint8);
+    _sendTrama(tramaFinal);
   }
 
-  void sendInterruptTrama(ButtonAction action) {
-    if (!connectionProvider.isConnected) {
-      print("Dispositivo no conectado. No se puede enviar la trama de interrupción.");
-      return;
-    }
+ void sendInterruptTrama(ButtonAction action) {
+  if (!connectionProvider.isConnected) {
+    print("Dispositivo no conectado. No se puede enviar la trama de interrupción.");
+    return;
+  }
 
-    final Uint8List trama = Uint8List.fromList(action.trama.codeUnits);
-    connectionProvider.connection?.output.add(trama);
-    _logTrama(trama);
+  final Uint8List trama = Uint8List.fromList(action.trama); // Conversión a Uint8List
+  connectionProvider.connection?.output.add(trama); // Enviar como Uint8List
+  _logTrama(trama);
+}
+
+  void _sendTrama(List<int> trama) {
+    final Uint8List tramaUint8 = Uint8List.fromList(trama);
+    connectionProvider.connection?.output.add(tramaUint8);
+    _logTrama(tramaUint8);
   }
 
   void _logTrama(Uint8List trama) {
     print("Trama enviada: ${trama.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ')}");
   }
+
+  /// Cambia dinámicamente el tiempo en el temporizador
+  void updateRemainingTime(int newTimeInSeconds) {
+    _remainingSeconds = newTimeInSeconds;
+    _sendTramaForTime(); // Opcional: enviar el nuevo tiempo actualizado
+    notifyListeners();
+  }
 }
+
 

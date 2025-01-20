@@ -1,4 +1,3 @@
-
 import 'package:bluetooth2_0/data/repositories/repositories.dart';
 import 'package:bluetooth2_0/domain/entities/button_action.dart';
 
@@ -7,6 +6,7 @@ class GetButtonActions {
 
   GetButtonActions(this.repository);
 
+  /// Obtiene todas las acciones de botones desde el repositorio
   List<ButtonAction> call() => repository.getAllButtonActions();
 }
 
@@ -15,7 +15,8 @@ class UpdateButtonAction {
 
   UpdateButtonAction(this.repository);
 
-  void call(String id, String newTrama) {
+  /// Actualiza la trama asociada con una acción específica
+  void call(String id, List<int> newTrama) {
     repository.updateTrama(id, newTrama);
   }
 }
